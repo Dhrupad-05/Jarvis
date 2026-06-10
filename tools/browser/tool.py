@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 from core.config import Settings
+from computer_control.planner import ActionPlanner
 from security.permissions import Capability, RiskLevel
 from shared.responses import ToolResult
 from tools.base_tool import BaseTool, ToolMetadata
@@ -21,11 +22,13 @@ class BrowserTool(BaseTool):
 
     def __init__(self, settings: Settings | None = None, controller: BrowserController | None = None) -> None:
         self.controller = controller or BrowserController(settings)
+        self.planner = ActionPlanner()
 
     def execute(self, user_text: str, *, confirmed: bool = False) -> ToolResult:
         lowered = user_text.lower()
         if "google search" in lowered or "search google" in lowered:
-            query = quoted_or_tail(user_text, ("google search", "search google"))
+            parsed = self.planner.extract_search(user_text)
+            query = parsed[1] if parsed else quoted_or_tail(user_text, ("google search", "search google"))
             url = self.controller.google_search(query)
             return ToolResult(True, f"Searched Google for '{query}'.", {"url": url})
         if "open youtube" in lowered:

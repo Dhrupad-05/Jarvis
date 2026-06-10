@@ -53,9 +53,10 @@ class ToolRegistry:
         tool = self.get(name)
         if self.mode_manager is not None:
             risk = tool.risk_level(user_text)
+            capability = tool.capability(user_text)
             decision = self.permission_policy.evaluate(
                 mode=self.mode_manager.active_mode,
-                capability=tool.metadata.capability,
+                capability=capability,
                 risk=risk,
                 confirmed=confirmed,
             )
@@ -65,6 +66,7 @@ class ToolRegistry:
                     "blocked",
                     tool=name,
                     risk=risk.value,
+                    capability=capability.value,
                     mode=self.mode_manager.active_mode.name,
                 )
                 return ToolResult(
@@ -88,6 +90,7 @@ def build_default_registry(
 ) -> ToolRegistry:
     from tools.applications.tool import ApplicationTool
     from tools.browser.tool import BrowserTool
+    from tools.control.tool import ComputerControlTool
     from tools.files.tool import FileTool
     from tools.system.tool import SystemTool
 
@@ -99,6 +102,8 @@ def build_default_registry(
     registry.register(BrowserTool(settings=settings))
     registry.register(FileTool(settings=settings))
     registry.register(SystemTool())
+    if settings is not None:
+        registry.register(ComputerControlTool(settings=settings))
     registry.register(
         PlaceholderTool(
             ToolMetadata(

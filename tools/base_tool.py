@@ -23,6 +23,9 @@ class BaseTool(ABC):
     def risk_level(self, user_text: str) -> RiskLevel:
         return self.metadata.risk_level
 
+    def capability(self, user_text: str) -> Capability:
+        return self.metadata.capability
+
     @abstractmethod
     def execute(self, user_text: str, *, confirmed: bool = False) -> ToolResult:
         """Run the tool and return a structured result."""
