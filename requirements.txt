@@ -1,0 +1,12 @@
+# Runtime dependencies
+
+# Optional voice support:
+# faster-whisper>=1.0.0
+# sounddevice>=0.4.6
+# numpy>=1.26.0
+#
+# Optional browser automation support:
+# playwright>=1.45.0
+
+# Development / test dependencies
+pytest>=8.0.0

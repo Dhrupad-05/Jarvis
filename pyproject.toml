@@ -1,0 +1,24 @@
+[project]
+name = "local-ai-assistant"
+version = "0.1.0"
+description = "Local-first personal AI assistant foundation."
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0"]
+voice = ["faster-whisper>=1.0.0", "sounddevice>=0.4.6", "numpy>=1.26.0"]
+browser = ["playwright>=1.45.0"]
+all = ["faster-whisper>=1.0.0", "sounddevice>=0.4.6", "numpy>=1.26.0", "playwright>=1.45.0"]
+
+[build-system]
+requires = ["setuptools>=69.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["brain*", "core*", "modes*", "router*", "security*", "shared*", "tools*", "voice*"]
+exclude = ["data*", "logs*", "tests*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
