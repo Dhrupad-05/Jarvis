@@ -50,37 +50,41 @@ class ToolRegistry:
         return None
 
     def execute(self, name: str, user_text: str, *, confirmed: bool = False) -> ToolResult:
-        tool = self.get(name)
-        if self.mode_manager is not None:
-            risk = tool.risk_level(user_text)
-            capability = tool.capability(user_text)
-            decision = self.permission_policy.evaluate(
-                mode=self.mode_manager.active_mode,
-                capability=capability,
-                risk=risk,
-                confirmed=confirmed,
-            )
-            if decision.requires_confirmation:
-                log_action(
-                    "tool_confirmation_required",
-                    "blocked",
-                    tool=name,
-                    risk=risk.value,
-                    capability=capability.value,
-                    mode=self.mode_manager.active_mode.name,
+        try:
+            tool = self.get(name)
+            if self.mode_manager is not None:
+                risk = tool.risk_level(user_text)
+                capability = tool.capability(user_text)
+                decision = self.permission_policy.evaluate(
+                    mode=self.mode_manager.active_mode,
+                    capability=capability,
+                    risk=risk,
+                    confirmed=confirmed,
                 )
-                return ToolResult(
-                    success=False,
-                    message=f"{decision.reason} Re-run with '--confirm' if you intend this action.",
-                    data={"tool": name, "risk": risk.value},
-                    requires_confirmation=True,
-                )
-            if not decision.allowed:
-                log_action("tool_blocked", "blocked", tool=name, reason=decision.reason)
-                return ToolResult(success=False, message=decision.reason, data={"tool": name})
-        result = tool.execute(user_text, confirmed=confirmed)
-        log_action("tool_execute", "success" if result.success else "failed", tool=name, message=result.message)
-        return result
+                if decision.requires_confirmation:
+                    log_action(
+                        "tool_confirmation_required",
+                        "blocked",
+                        tool=name,
+                        risk=risk.value,
+                        capability=capability.value,
+                        mode=self.mode_manager.active_mode.name,
+                    )
+                    return ToolResult(
+                        success=False,
+                        message=f"{decision.reason} Re-run with '--confirm' if you intend this action.",
+                        data={"tool": name, "risk": risk.value},
+                        requires_confirmation=True,
+                    )
+                if not decision.allowed:
+                    log_action("tool_blocked", "blocked", tool=name, reason=decision.reason)
+                    return ToolResult(success=False, message=decision.reason, data={"tool": name})
+            result = tool.execute(user_text, confirmed=confirmed)
+            log_action("tool_execute", "success" if result.success else "failed", tool=name, message=result.message)
+            return result
+        except Exception as exc:
+            log_action("tool_exception", "failed", tool=name, error=str(exc))
+            return ToolResult(False, f"Tool '{name}' failed safely: {exc}", {"tool": name, "error": str(exc)})
 
 
 def build_default_registry(

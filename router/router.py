@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from core.audit import log_action
 from modes.mode_manager import ModeManager
 from router.intents import Intent, IntentType, RouteDecision
 from shared.responses import ToolResult
@@ -22,6 +23,7 @@ class RequestRouter:
 
         mode = self._extract_mode(text)
         if mode:
+            log_action("routing_decision", "success", intent=IntentType.MODE_SWITCH.value, target=mode)
             return RouteDecision(
                 intent=Intent(IntentType.MODE_SWITCH, 0.98, "User requested mode switch."),
                 target_mode=mode,
@@ -29,16 +31,19 @@ class RequestRouter:
 
         tool_name = self.tool_registry.match(text)
         if tool_name:
+            log_action("routing_decision", "success", intent=IntentType.TOOL.value, tool=tool_name, text=text)
             return RouteDecision(
                 intent=Intent(IntentType.TOOL, 0.75, "Matched registered tool capability."),
                 tool_name=tool_name,
             )
 
         if any(term in text for term in ("screenshot", "ocr", "screen", "summarize pdf", "youtube")):
+            log_action("routing_decision", "success", intent=IntentType.FUTURE_CAPABILITY.value, text=text)
             return RouteDecision(
                 intent=Intent(IntentType.FUTURE_CAPABILITY, 0.6, "Recognized future capability; use LLM for now.")
             )
 
+        log_action("routing_decision", "success", intent=IntentType.CHAT.value, text=text)
         return RouteDecision(intent=Intent(IntentType.CHAT, 0.7, "Default conversational route."))
 
     def execute_tool(self, tool_name: str, user_text: str) -> ToolResult:

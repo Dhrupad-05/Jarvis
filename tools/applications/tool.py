@@ -31,7 +31,10 @@ class ApplicationTool(BaseTool):
             running = self.manager.is_running(spec)
             return ToolResult(True, f"{spec.name} is {'running' if running else 'not running'}.", {"running": running})
         self.manager.open(spec)
-        return ToolResult(True, f"Opened {spec.name}.", {"application": spec.name})
+        verified = self.manager.wait_until_running(spec)
+        if not verified:
+            return ToolResult(False, f"I could not verify that {spec.name} opened.", {"application": spec.name, "verification": "process_not_detected"})
+        return ToolResult(True, f"Opened {spec.name}.", {"application": spec.name, "verification": "process_detected"})
 
     def risk_level(self, user_text: str) -> RiskLevel:
         return RiskLevel.MEDIUM if "close" in user_text.lower() else RiskLevel.LOW

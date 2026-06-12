@@ -46,5 +46,6 @@ class BrowserTool(BaseTool):
             url = quoted_or_tail(user_text, ("open url", "go to"))
             if not url.startswith(("http://", "https://")):
                 url = "https://" + url
-        self.controller.open_url(url)
+        if not self.controller.open_url(url):
+            return ToolResult(False, f"Browser did not accept {url}.", {"url": url})
         return ToolResult(True, f"Opened {url}.", {"url": url})

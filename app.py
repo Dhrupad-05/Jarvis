@@ -37,7 +37,12 @@ def main() -> int:
     session = build_session(settings)
 
     if args.once:
-        print("".join(session.handle_stream(args.once)))
+        try:
+            print("".join(session.handle_stream(args.once)))
+        except Exception as exc:
+            log.exception("One-shot request failed")
+            print(f"Error: {exc}")
+            return 1
         return 0
 
     if args.voice:

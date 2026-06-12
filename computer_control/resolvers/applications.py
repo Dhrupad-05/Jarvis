@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -33,9 +34,9 @@ class ApplicationResolver:
             "notepad": ApplicationCandidate("Notepad", ("notepad",), ResolutionStrategy.KNOWN_REGISTRY, "notepad", 0.96),
             "calculator": ApplicationCandidate("Calculator", ("calc",), ResolutionStrategy.KNOWN_REGISTRY, "Calculator", 0.95),
             "calc": ApplicationCandidate("Calculator", ("calc",), ResolutionStrategy.KNOWN_REGISTRY, "Calculator", 0.95),
-            "powershell": ApplicationCandidate("PowerShell", ("powershell",), ResolutionStrategy.KNOWN_REGISTRY, "powershell", 0.95),
-            "commandprompt": ApplicationCandidate("Command Prompt", ("cmd",), ResolutionStrategy.KNOWN_REGISTRY, "cmd", 0.95),
-            "cmd": ApplicationCandidate("Command Prompt", ("cmd",), ResolutionStrategy.KNOWN_REGISTRY, "cmd", 0.95),
+            "powershell": ApplicationCandidate("PowerShell", ("cmd", "/c", "start", "", "powershell", "-NoExit"), ResolutionStrategy.KNOWN_REGISTRY, "powershell", 0.95),
+            "commandprompt": ApplicationCandidate("Command Prompt", ("cmd", "/c", "start", "", "cmd", "/K"), ResolutionStrategy.KNOWN_REGISTRY, "cmd", 0.95),
+            "cmd": ApplicationCandidate("Command Prompt", ("cmd", "/c", "start", "", "cmd", "/K"), ResolutionStrategy.KNOWN_REGISTRY, "cmd", 0.95),
             "taskmanager": ApplicationCandidate("Task Manager", ("taskmgr",), ResolutionStrategy.KNOWN_REGISTRY, "Taskmgr", 0.95),
             "devicemanager": ApplicationCandidate("Device Manager", ("devmgmt.msc",), ResolutionStrategy.KNOWN_REGISTRY, "mmc", 0.95),
             "settings": ApplicationCandidate("Settings", ("cmd", "/c", "start", "", "ms-settings:"), ResolutionStrategy.KNOWN_REGISTRY, "SystemSettings", 0.95),
@@ -155,6 +156,28 @@ class ApplicationResolver:
 
 @dataclass(frozen=True, slots=True)
 class ApplicationExecutor:
+    def process_ids(self, process_hint: str | None) -> set[int]:
+        if not process_hint:
+            return set()
+        process_name = process_hint if process_hint.lower().endswith(".exe") else f"{process_hint}.exe"
+        result = subprocess.run(
+            ["tasklist", "/FI", f"IMAGENAME eq {process_name}", "/FO", "CSV", "/NH"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        pids: set[int] = set()
+        for line in result.stdout.splitlines():
+            if not line.strip() or "No tasks are running" in line:
+                continue
+            parts = [part.strip().strip('"') for part in line.split(",")]
+            if len(parts) >= 2 and parts[0].lower() == process_name.lower():
+                try:
+                    pids.add(int(parts[1]))
+                except ValueError:
+                    continue
+        return pids
+
     def open(self, target: ResolvedTarget) -> bool:
         command = target.value
         if isinstance(command, Path):
@@ -174,5 +197,16 @@ class ApplicationExecutor:
     def is_running(self, process_hint: str | None) -> bool | None:
         if not process_hint:
             return None
-        result = subprocess.run(["tasklist"], capture_output=True, text=True, check=False)
-        return f"{process_hint.lower()}.exe" in result.stdout.lower()
+        return bool(self.process_ids(process_hint))
+
+    def wait_for_running(self, process_hint: str | None, previous_pids: set[int], timeout_seconds: float = 4.0) -> bool | None:
+        if not process_hint:
+            return None
+        deadline = time.perf_counter() + timeout_seconds
+        while time.perf_counter() < deadline:
+            current = self.process_ids(process_hint)
+            if current:
+                if current - previous_pids or current == previous_pids:
+                    return True
+            time.sleep(0.25)
+        return False

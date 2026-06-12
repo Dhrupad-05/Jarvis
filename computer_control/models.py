@@ -35,6 +35,7 @@ class ResolutionStrategy(str, Enum):
     SPECIAL_FOLDER = "special_folder"
     FILESYSTEM_SEARCH = "filesystem_search"
     SEARCH_ENGINE = "search_engine"
+    CLARIFICATION = "clarification"
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,3 +67,4 @@ class ExecutionReport:
     duration_ms: float = 0.0
     verification: str | None = None
     error: str | None = None
+    candidates: list[ResolvedTarget] = field(default_factory=list)

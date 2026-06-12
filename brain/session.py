@@ -4,6 +4,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 
 from brain.llm import LLMClient
+from core.audit import log_action
 from core.config import Settings
 from core.logger import get_logger
 from modes.mode_manager import ModeManager
@@ -26,7 +27,15 @@ class ChatSession:
 
     def handle_stream(self, user_text: str) -> Iterator[str]:
         user_message = Message(role=Role.USER, content=user_text)
-        route = self.router.route(user_text)
+        log_action("user_input", "received", chars=len(user_text))
+        try:
+            route = self.router.route(user_text)
+        except Exception as exc:
+            log.exception("Routing failed")
+            text = f"I could not route that request safely: {exc}"
+            self._append_turn(user_message, text)
+            yield text
+            return
 
         if route.intent.intent_type is IntentType.MODE_SWITCH and route.target_mode:
             mode = self.mode_manager.set_mode(route.target_mode)
@@ -36,7 +45,14 @@ class ChatSession:
             return
 
         if route.tool_name:
-            result = self.router.execute_tool(route.tool_name, user_text)
+            try:
+                result = self.router.execute_tool(route.tool_name, user_text)
+            except Exception as exc:
+                log.exception("Tool execution escaped safety boundary")
+                result_text = f"The tool failed safely: {exc}"
+                self._append_turn(user_message, result_text)
+                yield result_text
+                return
             text = result.message
             self._append_turn(user_message, text)
             yield text
@@ -65,4 +81,3 @@ class ChatSession:
         max_messages = self.settings.max_history_messages
         if len(self.state.messages) > max_messages:
             self.state.messages = self.state.messages[-max_messages:]
-

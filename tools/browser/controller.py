@@ -11,22 +11,25 @@ from core.config import Settings
 class BrowserController:
     settings: Settings | None = None
 
-    def open_url(self, url: str) -> None:
-        webbrowser.open(url)
+    def open_url(self, url: str) -> bool:
+        return bool(webbrowser.open(url))
 
     def google_search(self, query: str) -> str:
         url = f"https://www.google.com/search?q={quote_plus(query)}"
-        self.open_url(url)
+        if not self.open_url(url):
+            raise RuntimeError("Browser did not accept Google search URL.")
         return url
 
     def open_youtube(self, query: str | None = None) -> str:
         url = "https://www.youtube.com" if not query else f"https://www.youtube.com/results?search_query={quote_plus(query)}"
-        self.open_url(url)
+        if not self.open_url(url):
+            raise RuntimeError("Browser did not accept YouTube URL.")
         return url
 
     def open_github(self, query: str | None = None) -> str:
         url = "https://github.com" if not query else f"https://github.com/search?q={quote_plus(query)}"
-        self.open_url(url)
+        if not self.open_url(url):
+            raise RuntimeError("Browser did not accept GitHub URL.")
         return url
 
     async def navigate_with_playwright(self, url: str) -> str:

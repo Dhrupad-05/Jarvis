@@ -21,8 +21,9 @@ class FakeBrowser(BrowserController):
     def __init__(self) -> None:
         self.urls: list[str] = []
 
-    def open_url(self, url: str) -> None:
+    def open_url(self, url: str) -> bool:
         self.urls.append(url)
+        return True
 
 
 class FailingApplicationExecutor(ApplicationExecutor):

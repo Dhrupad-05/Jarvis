@@ -16,6 +16,27 @@ IRREGULAR_DOMAINS = {
     "twitter": "x.com",
 }
 
+HIGH_CONFIDENCE_WEB_TARGETS = {
+    "github",
+    "google",
+    "youtube",
+    "linkedin",
+    "reddit",
+    "stackoverflow",
+    "huggingface",
+    "kaggle",
+    "openai",
+    "coursera",
+    "udemy",
+    "leetcode",
+    "codeforces",
+    "geeksforgeeks",
+    "medium",
+    "x",
+    "twitter",
+    "facebook",
+}
+
 
 @dataclass(frozen=True, slots=True)
 class WebsiteResolver:
@@ -29,7 +50,8 @@ class WebsiteResolver:
         if literal:
             return ResolvedTarget(target, TargetType.WEBSITE, literal, ResolutionStrategy.URL_LITERAL, 0.99)
         domain = self._domain_for(target)
-        return ResolvedTarget(title_name(target), TargetType.WEBSITE, f"https://{domain}", ResolutionStrategy.DOMAIN_HEURISTIC, 0.72)
+        confidence = 0.86 if normalize_target(target) in HIGH_CONFIDENCE_WEB_TARGETS else 0.58
+        return ResolvedTarget(title_name(target), TargetType.WEBSITE, f"https://{domain}", ResolutionStrategy.DOMAIN_HEURISTIC, confidence)
 
     def _search_url(self, plan: ActionPlan) -> ResolvedTarget:
         engine = normalize_target(plan.target_text or "google")

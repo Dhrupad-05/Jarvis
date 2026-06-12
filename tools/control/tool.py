@@ -41,6 +41,15 @@ class ComputerControlTool(BaseTool):
                 "duration_ms": report.duration_ms,
                 "verification": report.verification,
                 "error": report.error,
+                "candidates": [
+                    {
+                        "name": candidate.name,
+                        "target_type": candidate.target_type.value,
+                        "strategy": candidate.strategy.value,
+                        "confidence": candidate.confidence,
+                    }
+                    for candidate in report.candidates
+                ],
             },
         )
 

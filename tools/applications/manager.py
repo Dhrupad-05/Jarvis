@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import time
 from dataclasses import dataclass, field
 
 
@@ -50,6 +51,25 @@ class ApplicationManager:
         return closed
 
     def is_running(self, spec: ApplicationSpec) -> bool:
-        result = subprocess.run(["tasklist"], capture_output=True, text=True, check=False)
-        output = result.stdout.lower()
-        return any(f"{name.lower()}.exe" in output for name in spec.process_names)
+        return any(self.process_ids(name) for name in spec.process_names)
+
+    def process_ids(self, process_name: str) -> set[int]:
+        image = process_name if process_name.lower().endswith(".exe") else f"{process_name}.exe"
+        result = subprocess.run(["tasklist", "/FI", f"IMAGENAME eq {image}", "/FO", "CSV", "/NH"], capture_output=True, text=True, check=False)
+        pids: set[int] = set()
+        for line in result.stdout.splitlines():
+            parts = [part.strip().strip('"') for part in line.split(",")]
+            if len(parts) >= 2 and parts[0].lower() == image.lower():
+                try:
+                    pids.add(int(parts[1]))
+                except ValueError:
+                    continue
+        return pids
+
+    def wait_until_running(self, spec: ApplicationSpec, timeout_seconds: float = 4.0) -> bool:
+        deadline = time.perf_counter() + timeout_seconds
+        while time.perf_counter() < deadline:
+            if self.is_running(spec):
+                return True
+            time.sleep(0.25)
+        return False
