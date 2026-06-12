@@ -26,6 +26,9 @@ class BaseTool(ABC):
     def capability(self, user_text: str) -> Capability:
         return self.metadata.capability
 
+    def matches(self, normalized_text: str) -> bool:
+        return any(keyword in normalized_text for keyword in self.metadata.keywords)
+
     @abstractmethod
     def execute(self, user_text: str, *, confirmed: bool = False) -> ToolResult:
         """Run the tool and return a structured result."""

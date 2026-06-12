@@ -33,6 +33,7 @@ python -m playwright install chromium
 - `/memory stats`
 - `/memory list`
 - `/memory search <query>`
+- `/memory show <id>`
 - `/memory delete <id>`
 - `/memory export`
 - `/reset`

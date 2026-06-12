@@ -45,7 +45,7 @@ class ToolRegistry:
         for name, tool in self.tools.items():
             if not tool.metadata.enabled:
                 continue
-            if any(keyword in normalized_text for keyword in tool.metadata.keywords):
+            if tool.matches(normalized_text):
                 return name
         return None
 
@@ -114,8 +114,8 @@ def build_default_registry(
             from memory.memory_manager import MemoryManager
 
             memory_manager = MemoryManager.from_settings(settings)
-            registry.register(MemoryTool(memory_manager, mode_manager))
             registry.register(CodingTool(settings, memory_manager))
+            registry.register(MemoryTool(memory_manager, mode_manager))
     registry.register(
         PlaceholderTool(
             ToolMetadata(

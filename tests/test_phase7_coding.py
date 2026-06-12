@@ -73,6 +73,19 @@ def test_coding_tool_router_integration(tmp_path: Path) -> None:
     assert "Repository:" in result.message
 
 
+def test_coding_task_routes_to_coding_not_memory(tmp_path: Path) -> None:
+    settings = settings_for(tmp_path)
+    modes = ModeManager.from_settings(settings)
+    registry = build_default_registry(settings=settings, mode_manager=modes, permission_policy=PermissionPolicy())
+    router = RequestRouter(registry, modes)
+    decision = router.route("coding task inspect memory architecture")
+    assert decision.tool_name == "coding"
+    result = registry.execute("coding", "coding task inspect memory architecture")
+    assert result.success
+    recall = registry.execute("memory", "recall memory architecture")
+    assert "inspect memory architecture" in recall.message
+
+
 def test_coding_tool_error_analysis(tmp_path: Path) -> None:
     settings = settings_for(tmp_path)
     modes = ModeManager.from_settings(settings)
