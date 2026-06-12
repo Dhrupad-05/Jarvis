@@ -68,3 +68,11 @@ class ExecutionReport:
     verification: str | None = None
     error: str | None = None
     candidates: list[ResolvedTarget] = field(default_factory=list)
+
+
+@dataclass(frozen=True, slots=True)
+class VerificationResult:
+    success: bool
+    message: str
+    method: str
+    observed: bool | None = None

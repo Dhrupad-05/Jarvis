@@ -19,11 +19,17 @@ class MicrophoneRecorder:
         except ImportError as exc:
             raise VoiceError("Microphone recording requires the 'sounddevice' package.") from exc
 
-        frames = int(seconds * self.sample_rate)
-        audio = sd.rec(frames, samplerate=self.sample_rate, channels=self.channels, dtype="int16")
-        sd.wait()
+        if seconds <= 0:
+            raise VoiceError("Recording duration must be positive.")
+        try:
+            frames = int(seconds * self.sample_rate)
+            audio = sd.rec(frames, samplerate=self.sample_rate, channels=self.channels, dtype="int16")
+            sd.wait()
+        except Exception as exc:
+            raise VoiceError(f"Microphone recording failed: {exc}") from exc
 
-        output = Path(tempfile.NamedTemporaryFile(suffix=".wav", delete=False).name)
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+            output = Path(tmp.name)
         with wave.open(str(output), "wb") as wav:
             wav.setnchannels(self.channels)
             wav.setsampwidth(2)

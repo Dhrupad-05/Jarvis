@@ -10,6 +10,7 @@ from security.permissions import Capability, PermissionPolicy, RiskLevel
 from voice.microphone import MicrophoneRecorder
 from voice.stt import WhisperTranscriber
 from voice.tts import PiperSpeaker
+from voice.diagnostics import VoiceDiagnostics, run_voice_diagnostics
 
 
 @dataclass(slots=True)
@@ -43,17 +44,47 @@ class VoiceManager:
         )
         if not decision.allowed:
             raise VoiceError(decision.reason)
-        audio_path = self.recorder.record_push_to_talk(seconds=seconds)
-        text = self.transcriber.transcribe(audio_path)
-        log_action("voice_listen", "success", chars=len(text))
-        return text
+        audio_path = None
+        try:
+            audio_path = self.recorder.record_push_to_talk(seconds=seconds)
+            text = self.transcriber.transcribe(audio_path)
+            log_action("voice_listen", "success", chars=len(text))
+            return text
+        except VoiceError:
+            raise
+        except Exception as exc:
+            raise VoiceError(f"Voice listening failed: {exc}") from exc
+        finally:
+            if audio_path is not None:
+                try:
+                    audio_path.unlink(missing_ok=True)
+                    log_action("voice_temp_cleanup", "success", file=str(audio_path))
+                except Exception as exc:
+                    log_action("voice_temp_cleanup", "failed", file=str(audio_path), error=str(exc))
 
     def speak(self, text: str) -> None:
-        self.speaker.speak(text)
+        try:
+            self.speaker.speak(text)
+        except VoiceError:
+            raise
+        except Exception as exc:
+            raise VoiceError(f"Voice playback failed: {exc}") from exc
+
+    def validate_startup(self) -> VoiceDiagnostics:
+        diagnostics = run_voice_diagnostics(self.settings)
+        log_action(
+            "voice_startup_validation",
+            "success" if diagnostics.usable_for_listening and diagnostics.usable_for_speaking else "failed",
+            messages=diagnostics.messages(),
+        )
+        return diagnostics
 
     def conversation_loop(self) -> int:
-        if not self.settings.voice_enabled:
-            print("Voice mode is disabled. Set ENABLE_VOICE=true in .env to use --voice.")
+        diagnostics = self.validate_startup()
+        if not diagnostics.usable_for_listening or not diagnostics.usable_for_speaking:
+            print("Voice mode is not ready:")
+            for message in diagnostics.messages():
+                print(f"- {message}")
             return 1
         if not self.session.mode_manager.active_mode.voice_listening_enabled:
             print("Voice listening is disabled in the active mode.")
@@ -72,6 +103,6 @@ class VoiceManager:
                 response = "".join(self.session.handle_stream(user_text))
                 print(f"{self.settings.assistant_name}: {response}")
                 self.speak(response)
-            except VoiceError as exc:
+            except Exception as exc:
                 print(f"Voice error: {exc}")
                 log_action("voice_loop", "failed", error=str(exc))

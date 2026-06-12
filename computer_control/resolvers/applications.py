@@ -7,7 +7,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from computer_control.models import ResolutionStrategy, ResolvedTarget, TargetType
+from computer_control.models import ResolutionStrategy, ResolvedTarget, TargetType, VerificationResult
 from computer_control.text import normalize_target, title_name
 
 
@@ -34,6 +34,7 @@ class ApplicationResolver:
             "notepad": ApplicationCandidate("Notepad", ("notepad",), ResolutionStrategy.KNOWN_REGISTRY, "notepad", 0.96),
             "calculator": ApplicationCandidate("Calculator", ("calc",), ResolutionStrategy.KNOWN_REGISTRY, "Calculator", 0.95),
             "calc": ApplicationCandidate("Calculator", ("calc",), ResolutionStrategy.KNOWN_REGISTRY, "Calculator", 0.95),
+            "camera": ApplicationCandidate("Camera", ("cmd", "/c", "start", "", "microsoft.windows.camera:"), ResolutionStrategy.KNOWN_REGISTRY, "WindowsCamera", 0.88),
             "powershell": ApplicationCandidate("PowerShell", ("cmd", "/c", "start", "", "powershell", "-NoExit"), ResolutionStrategy.KNOWN_REGISTRY, "powershell", 0.95),
             "commandprompt": ApplicationCandidate("Command Prompt", ("cmd", "/c", "start", "", "cmd", "/K"), ResolutionStrategy.KNOWN_REGISTRY, "cmd", 0.95),
             "cmd": ApplicationCandidate("Command Prompt", ("cmd", "/c", "start", "", "cmd", "/K"), ResolutionStrategy.KNOWN_REGISTRY, "cmd", 0.95),
@@ -210,3 +211,16 @@ class ApplicationExecutor:
                     return True
             time.sleep(0.25)
         return False
+
+    def verify_launch(self, process_hint: str | None, previous_pids: set[int], timeout_seconds: float = 4.0) -> VerificationResult:
+        if not process_hint:
+            return VerificationResult(True, "Launch command accepted; no process hint available.", "unavailable", None)
+        running = self.wait_for_running(process_hint, previous_pids, timeout_seconds=timeout_seconds)
+        if running is True:
+            current = self.process_ids(process_hint)
+            if current - previous_pids:
+                return VerificationResult(True, "New process detected.", "tasklist", True)
+            return VerificationResult(True, "Process is running; application may have reused an existing instance.", "tasklist", True)
+        if running is None:
+            return VerificationResult(True, "Launch command accepted; verification unavailable.", "unavailable", None)
+        return VerificationResult(False, "Launch command ran, but process was not detected.", "tasklist", False)

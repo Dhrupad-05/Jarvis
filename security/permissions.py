@@ -18,6 +18,7 @@ class Capability(str, Enum):
     FILES = "files"
     SYSTEM = "system"
     VOICE = "voice"
+    MEMORY = "memory"
 
 
 @dataclass(frozen=True, slots=True)

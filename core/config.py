@@ -51,6 +51,7 @@ class Settings:
     browser_headless: bool
     require_confirmation_for_medium: bool
     require_confirmation_for_high: bool
+    memory_db_path: Path
 
     @classmethod
     def load(cls, project_root: Path | None = None) -> "Settings":
@@ -82,6 +83,7 @@ class Settings:
             browser_headless=_get_bool(env, "BROWSER_HEADLESS", False),
             require_confirmation_for_medium=_get_bool(env, "CONFIRM_MEDIUM_RISK", True),
             require_confirmation_for_high=_get_bool(env, "CONFIRM_HIGH_RISK", True),
+            memory_db_path=root / constants.DATA_DIR / _get_value(env, "MEMORY_DB_NAME", "memory.sqlite3"),
         )
         settings.ensure_directories()
         return settings

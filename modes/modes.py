@@ -40,6 +40,8 @@ class AssistantMode:
             return self.system_control_enabled and self.automation_enabled
         if capability in {"applications", "files"}:
             return self.automation_enabled
+        if capability == "memory":
+            return True
         return True
 
 

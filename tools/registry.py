@@ -96,6 +96,7 @@ def build_default_registry(
     from tools.browser.tool import BrowserTool
     from tools.control.tool import ComputerControlTool
     from tools.files.tool import FileTool
+    from tools.memory.tool import MemoryTool
     from tools.system.tool import SystemTool
 
     registry = ToolRegistry(
@@ -108,6 +109,10 @@ def build_default_registry(
     registry.register(SystemTool())
     if settings is not None:
         registry.register(ComputerControlTool(settings=settings))
+        if mode_manager is not None:
+            from memory.memory_manager import MemoryManager
+
+            registry.register(MemoryTool(MemoryManager.from_settings(settings), mode_manager))
     registry.register(
         PlaceholderTool(
             ToolMetadata(

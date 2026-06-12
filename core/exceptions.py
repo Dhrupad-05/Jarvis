@@ -27,3 +27,7 @@ class PermissionDeniedError(AssistantError):
 
 class VoiceError(AssistantError):
     """Raised when voice capture, transcription, or playback fails."""
+
+
+class ValidationError(AssistantError):
+    """Raised when subsystem validation fails."""

@@ -132,10 +132,8 @@ class ComputerControlService:
             process_hint = target.metadata.get("process_hint")
             previous_pids = self.app_executor.process_ids(str(process_hint)) if process_hint else set()
             launched = self.app_executor.open(target)
-            running = self.app_executor.wait_for_running(str(process_hint), previous_pids) if process_hint else None
-            if running is False:
-                return False, "Launch command ran, but process was not detected."
-            return launched, "Launch command issued; process verification unavailable." if running is None else "Process detected." if running else "Process not detected."
+            verification = self.app_executor.verify_launch(str(process_hint) if process_hint else None, previous_pids)
+            return launched and verification.success, verification.message
         return False, "Unsupported target type."
 
     def _message(self, plan: ActionPlan, target: ResolvedTarget, success: bool) -> str:

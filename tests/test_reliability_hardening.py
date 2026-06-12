@@ -62,7 +62,7 @@ def make_session(tmp_path: Path) -> ChatSession:
     return ChatSession(settings, FakeLLM(), RequestRouter(registry, modes), modes)
 
 
-def test_open_camera_requires_clarification_and_opens_nothing(tmp_path: Path) -> None:
+def test_low_confidence_target_requires_clarification_and_opens_nothing(tmp_path: Path) -> None:
     settings = settings_for(tmp_path)
     browser = RecordingBrowser()
     service = ComputerControlService(
@@ -74,7 +74,7 @@ def test_open_camera_requires_clarification_and_opens_nothing(tmp_path: Path) ->
         filesystem_resolver=FilesystemResolver(tmp_path),
         filesystem_executor=FilesystemExecutor(),
     )
-    report = service.execute(ActionPlan(ActionType.OPEN, "camera", TargetType.UNKNOWN, "open camera"))
+    report = service.execute(ActionPlan(ActionType.OPEN, "madeupwebthing", TargetType.UNKNOWN, "open madeupwebthing"))
     assert not report.success
     assert "not confident enough" in report.message
     assert browser.urls == []
@@ -182,7 +182,7 @@ def test_session_survives_tool_failure(tmp_path: Path) -> None:
 def test_interactive_loop_continues_after_tool_failure(tmp_path: Path) -> None:
     result = subprocess.run(
         [sys.executable, "app.py"],
-        input="open camera\n/exit\n",
+        input="open madeupwebthing\n/exit\n",
         capture_output=True,
         text=True,
         cwd=Path(__file__).resolve().parents[1],
