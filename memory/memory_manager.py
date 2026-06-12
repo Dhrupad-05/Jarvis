@@ -67,3 +67,15 @@ class MemoryManager:
 
     def summarize(self, limit: int = 20) -> str:
         return self.summarizer.summarize(self.store.list(limit=limit))
+
+    def stats(self) -> dict[str, int]:
+        counts: dict[str, int] = {"total": self.store.count()}
+        for record in self.store.export():
+            counts[record.memory_type.value] = counts.get(record.memory_type.value, 0) + 1
+        return counts
+
+    def export_text(self) -> str:
+        records = self.store.export()
+        if not records:
+            return "No memory found."
+        return "\n".join(f"#{record.id} [{record.memory_type.value}] {record.content}" for record in records)

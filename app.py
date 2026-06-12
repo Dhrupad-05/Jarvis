@@ -72,6 +72,15 @@ def main() -> int:
         if user_text.lower() == "/modes":
             print("Modes: " + ", ".join(session.mode_manager.available_mode_names()))
             continue
+        if user_text.lower().startswith("/memory"):
+            command = user_text[len("/memory") :].strip() or "stats"
+            try:
+                result = session.router.tool_registry.get("memory").developer_command(command)  # type: ignore[attr-defined]
+                print(result.message)
+            except Exception as exc:
+                log.exception("Memory command failed")
+                print(f"Memory command failed: {exc}")
+            continue
         if user_text.lower().startswith("/mode "):
             mode_name = user_text.split(maxsplit=1)[1]
             try:

@@ -18,6 +18,8 @@ class MemoryStore(Protocol):
     def update(self, memory_id: int, content: str, importance: int | None = None) -> MemoryRecord | None: ...
     def delete(self, memory_id: int) -> bool: ...
     def search(self, query: str, limit: int = 10, memory_types: tuple[MemoryType, ...] = ()) -> list[MemoryRecord]: ...
+    def count(self) -> int: ...
+    def export(self) -> list[MemoryRecord]: ...
 
 
 @dataclass(slots=True)
@@ -127,9 +129,21 @@ class SQLiteMemoryStore:
             ).fetchall()
         return [self._row_to_record(row) for row in rows]
 
+    def count(self) -> int:
+        with self._connect() as conn:
+            row = conn.execute("SELECT COUNT(*) AS count FROM memories").fetchone()
+        return int(row["count"])
+
+    def export(self) -> list[MemoryRecord]:
+        with self._connect() as conn:
+            rows = conn.execute("SELECT * FROM memories ORDER BY id ASC").fetchall()
+        return [self._row_to_record(row) for row in rows]
+
     def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=5.0)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA busy_timeout=5000")
         return conn
 
     def _row_to_record(self, row: sqlite3.Row) -> MemoryRecord:
